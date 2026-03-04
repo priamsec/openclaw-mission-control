@@ -352,8 +352,8 @@ export function CalendarView() {
           {[
             {
               label: "Upcoming events",
-              value: data?.summary.totalEvents ?? "—",
-              hint: "Local + imported",
+              value: data?.upcomingEvents.length ?? "—",
+              hint: "Current timeline window",
               icon: CalendarDays,
             },
             {
