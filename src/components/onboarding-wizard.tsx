@@ -787,7 +787,7 @@ export function OnboardingWizard({ onComplete }: { onComplete?: () => void }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "add",
+          action: "connect",
           channel: currentChannel.id,
           token: channelToken.trim(),
           ...(currentChannel.requiresAppToken ? { appToken: channelAppToken.trim() } : {}),
