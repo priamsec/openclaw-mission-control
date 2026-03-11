@@ -2519,25 +2519,7 @@ export function CronView() {
     }
   }, [expanded, runOutput]);
 
-  if (loading) {
-    return (
-      <SectionLayout>
-        <LoadingState label="Loading cron jobs..." />
-      </SectionLayout>
-    );
-  }
-
-  const errorJobs = jobs.filter((j) => {
-    const local = runOutput[j.id];
-    const localIsNewer =
-      Boolean(local) &&
-      (!j.state.lastRunAtMs || (local?.runStartedAtMs || 0) > j.state.lastRunAtMs);
-    if (localIsNewer && local?.status === "done") return false;
-    if (localIsNewer && local?.status === "error") return true;
-    return j.state.lastStatus === "error";
-  });
-
-  // Filter + sort
+  // Filter + sort (must be above any conditional return to satisfy Rules of Hooks)
   const filteredJobs = useMemo(() => {
     let list = jobs;
     if (searchFilter.trim()) {
@@ -2568,6 +2550,24 @@ export function CronView() {
       }
     });
   }, [jobs, searchFilter, sortBy]);
+
+  const errorJobs = jobs.filter((j) => {
+    const local = runOutput[j.id];
+    const localIsNewer =
+      Boolean(local) &&
+      (!j.state.lastRunAtMs || (local?.runStartedAtMs || 0) > j.state.lastRunAtMs);
+    if (localIsNewer && local?.status === "done") return false;
+    if (localIsNewer && local?.status === "error") return true;
+    return j.state.lastStatus === "error";
+  });
+
+  if (loading) {
+    return (
+      <SectionLayout>
+        <LoadingState label="Loading cron jobs..." />
+      </SectionLayout>
+    );
+  }
 
   return (
     <SectionLayout>
