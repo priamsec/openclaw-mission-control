@@ -1003,6 +1003,7 @@ function ClawHubPanel({
   onAction: (msg: string) => void;
   onInstalled: (slug: string) => Promise<void>;
 }) {
+  const CLAWHUB_INSTALL_CMD = "npm i -g clawhub";
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<ClawHubItem[]>([]);
   const [installed, setInstalled] = useState<Record<string, string>>({});
@@ -1012,8 +1013,20 @@ function ClawHubPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clawhubNotFound, setClawhubNotFound] = useState(false);
+  const [copiedInstallCmd, setCopiedInstallCmd] = useState(false);
   const [busySlug, setBusySlug] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"install" | "update" | "uninstall" | null>(null);
+
+  const handleCopyInstallCommand = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(CLAWHUB_INSTALL_CMD);
+      setCopiedInstallCmd(true);
+      onAction("Copied install command.");
+      window.setTimeout(() => setCopiedInstallCmd(false), 1500);
+    } catch {
+      onAction("Could not copy command. Please copy it manually.");
+    }
+  }, [onAction]);
 
   const displayedItems: ClawHubItem[] = viewFilter === "installed"
     ? Object.entries(installed).map(([slug, version]) => {
@@ -1047,6 +1060,7 @@ function ClawHubPanel({
       const data = await res.json();
       if (data?.code === "CLAWHUB_NOT_FOUND") {
         setClawhubNotFound(true);
+        setCopiedInstallCmd(false);
         setError(null);
         setInstalled({});
         return;
@@ -1077,6 +1091,7 @@ function ClawHubPanel({
       const data = await res.json();
       if (data?.code === "CLAWHUB_NOT_FOUND") {
         setClawhubNotFound(true);
+        setCopiedInstallCmd(false);
         setError(null);
         setItems([]);
         setLoading(false);
@@ -1126,6 +1141,7 @@ function ClawHubPanel({
       const data = await res.json();
       if (data?.code === "CLAWHUB_NOT_FOUND") {
         setClawhubNotFound(true);
+        setCopiedInstallCmd(false);
         setError(null);
         setItems([]);
         setLoading(false);
@@ -1173,7 +1189,7 @@ function ClawHubPanel({
       const data = await res.json();
       if (data?.code === "CLAWHUB_NOT_FOUND") {
         setClawhubNotFound(true);
-        onAction("Error: Cannot find ClawHub. Did you install it?");
+        onAction("ClawHub is missing for this Mission Control service. Install it, restart the service, then retry.");
         setBusySlug(null);
         setBusyAction(null);
         return;
@@ -1211,7 +1227,7 @@ function ClawHubPanel({
       const data = await res.json();
       if (data?.code === "CLAWHUB_NOT_FOUND") {
         setClawhubNotFound(true);
-        onAction("Error: Cannot find ClawHub. Did you install it?");
+        onAction("ClawHub is missing for this Mission Control service. Install it, restart the service, then retry.");
       } else if (!res.ok || !data.ok) {
         onAction(`Error: ${data.error || "update failed"}`);
       } else {
@@ -1278,14 +1294,43 @@ function ClawHubPanel({
   return (
     <div className="space-y-3">
       {clawhubNotFound && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-200">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-200">
+          <div className="flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium">Cannot find ClawHub</p>
+              <p className="font-medium">ClawHub is not available for this service</p>
             <p className="text-xs mt-0.5 text-amber-700 dark:text-amber-300">
-              Did you install it? Make sure the <code className="font-mono bg-amber-500/20 px-1 rounded">clawhub</code> command is on your PATH.
+                Catalog actions are disabled until the <code className="font-mono bg-amber-500/20 px-1 rounded">clawhub</code> binary is installed for the same OS user that runs Mission Control.
             </p>
           </div>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-mono text-xs text-amber-700 dark:text-amber-200">
+              {CLAWHUB_INSTALL_CMD}
+            </code>
+            <button
+              type="button"
+              onClick={() => void handleCopyInstallCommand()}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-200"
+            >
+              <Copy className="h-3 w-3" />
+              {copiedInstallCmd ? "Copied" : "Copy"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void fetchInstalled();
+                void fetchExplore();
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-200"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Retry
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-amber-700/90 dark:text-amber-300">
+            After installing, restart Mission Control and click Retry.
+          </p>
         </div>
       )}
       <p className="text-xs text-muted-foreground">Browse and install skills from the catalog. Install adds them to your project; then turn them on from Local Skills.</p>
@@ -1394,7 +1439,7 @@ function ClawHubPanel({
                           Delete
                         </button>
                       )}
-                      <button type="button" disabled={isBusy} onClick={() => void installSkill(item.slug, item.version)} className="rounded-md border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50">
+                      <button type="button" disabled={isBusy || clawhubNotFound} onClick={() => void installSkill(item.slug, item.version)} className="rounded-md border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50">
                         {installLabel}
                       </button>
                     </div>
