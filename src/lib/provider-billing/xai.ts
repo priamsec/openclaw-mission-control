@@ -76,7 +76,7 @@ export async function collectXaiBilling(): Promise<CollectorResult> {
     const fetchedAtMs = Date.now();
     const todayStr = new Date().toISOString().slice(0, 10);
     const rows: NormalizedProviderBillingBucket[] = rowsRaw
-      .map((row) => {
+      .map<NormalizedProviderBillingBucket>((row) => {
       const date = row.date || todayStr;
       const { bucketStartMs, bucketEndMs } = utcDayRange(date);
       const spendUsd = Number.isFinite(row.spend_usd)
